@@ -1,0 +1,98 @@
+version: '3.9'
+
+networks:
+  storages:
+  public:
+
+volumes:
+  clickhouse:
+    name: ${CLICKHOUSE_DOCKER_MOUNT}
+  mysql:
+    name: ${MYSQL_DOCKER_MOUNT}
+  
+
+services:
+
+  # Supported storages.
+  clickhouse_db:
+    image: yandex/clickhouse-server:${CLICKHOUSE_VERSION}
+    ports:
+      - 8123:8123
+    volumes:
+      - clickhouse:/var/lib/clickhouse:rw
+    ulimits:
+      nofile:
+        soft: 262144
+        hard: 262144
+    restart: unless-stopped
+    networks:
+      - storages
+
+  mysql:
+    image: mysql:${MYSQL_VERSION}
+    ports:
+      - 3306:3306
+    volumes:
+      - mysql:/var/lib/mysql:rw
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=SANDBOX
+      - MYSQL_USER=etl
+      - MYSQL_PASSWORD=etl
+    restart: unless-stopped
+    networks:
+      - storages
+  
+  # Data comsumers
+  clickhouse_writer:
+    image: clickhouse-writer:${CLICKHOUSE_WRITER_VERSION}
+    build:
+      dockerfile: ./docker/Dockerfile
+      context: ./
+      args:
+        - STORAGE=clickhouse
+        - SERVICE=writer
+    restart: unless-stopped
+    networks:
+      - storages
+      - public
+    depends_on:
+      - clickhouse_db
+    command: >
+      -endpoint '0.0.0.0:24190'
+      -host 'clickhouse_db'
+      -port 8123
+      -user 'default'
+      -password ''
+      -workers ${LOCAL_CLICKHOUSE_WORKERS}
+      -log '${LOCAL_CLICKHOUSE_LOG_LEVEL}'
+  
+  # Data providers
+  clickhouse_reader:
+    image: clickhouse-reader:${CLICKHOUSE_READER_VERSION}
+    build:
+      dockerfile: ./docker/Dockerfile
+      context: ./
+      args:
+        - STORAGE=clickhouse
+        - SERVICE=reader
+    restart: 'no'
+    networks:
+      - public
+    depends_on:
+      - clickhouse_writer
+    command: >
+      -comsumer '${PUBLIC_CLICKHOUSE_CONSUMER}'
+      -host '${PUBLIC_CLICKHOUSE_HOST}'
+      -port ${PUBLIC_CLICKHOUSE_PORT}
+      -user '${PUBLIC_CLICKHOUSE_USER}'
+      -password '${PUBLIC_CLICKHOUSE_PASSWORD}'
+      -from '${PUBLIC_CLICKHOUSE_FROM}'
+      -to '${PUBLIC_CLICKHOUSE_TO}'
+      -order '${PUBLIC_CLICKHOUSE_ORDER}'
+      -batch ${PUBLIC_CLICKHOUSE_BATCH}
+      -window "${PUBLIC_CLICKHOUSE_WINDOW}"
+      -workers ${PUBLIC_CLICKHOUSE_WORKERS}
+      -log '${PUBLIC_CLICKHOUSE_LOG_LEVEL}'
+    
+    
