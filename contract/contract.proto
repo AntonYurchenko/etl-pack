@@ -1,0 +1,60 @@
+/*
+    Compilation: 
+        protoc --go_out=. \
+            --go_opt=paths=source_relative \
+            --go-grpc_out=. \
+            --go-grpc_opt=paths=source_relative \
+            contract/contract.proto
+*/
+syntax = "proto3";
+
+option go_package = "./contract";
+
+// This is a container with data batch and a target entity.
+message Message {
+
+    // Name of target entity for saving a data batch.
+    string target = 1;
+
+    Batch batch = 2;
+}
+
+// Any batch of data.
+// Examples 
+//     - A column with name = names[0] has a type = types[0] and value = values[0].
+//     - A column with name = names[1] has a type = types[1] and value = values[len(names)].
+message Batch {
+    
+    // List of all column names in batch.
+    repeated string names = 1;
+    
+    // List of all column types in batch.
+    // Available types:
+    //   - int[8, 16, 32, 64]
+    //   - uint[8, 16, 32, 64]
+    //   - float[34, 64]
+    //   - date (in format 2006-01-02)
+    //   - datetime (in format 2006-01-02T15:04:05.999Z07:00)
+    //   - string
+    repeated string types = 2;
+
+    // List of all column values in batch. 
+    repeated bytes values = 3;
+}
+
+// Status is a response from DataConsumer.
+message Status {
+
+    // Text of error.
+    string error = 1;
+
+    // count of rows which have been success written.
+    int32 success = 2;
+}
+
+// DataConsumer is an universal data gateway.
+service DataConsumer {
+
+    // It reads messages with data from stream and writes statuses to stream as response.
+    rpc Exchange(stream Message) returns (stream Status) {}
+}
