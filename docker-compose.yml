@@ -14,10 +14,10 @@ volumes:
 services:
 
   # Supported storages.
-  clickhouse_db:
+  clickhouse:
     image: yandex/clickhouse-server:${CLICKHOUSE_VERSION}
     ports:
-      - 8123:8123
+      - ${CLICKHOUSE_EXTERNAL_PORT}:${CLICKHOUSE_INTERNAL_PORT}
     volumes:
       - clickhouse:/var/lib/clickhouse:rw
     ulimits:
@@ -31,14 +31,12 @@ services:
   mysql:
     image: mysql:${MYSQL_VERSION}
     ports:
-      - 3306:3306
+      - ${MYSQL_EXTERNAL_PORT}:${MYSQL_INTERNAL_PORT}
     volumes:
       - mysql:/var/lib/mysql:rw
+      - ./etc/my.cnf:/etc/my.cnf:ro
     environment:
-      - MYSQL_ROOT_PASSWORD=root
-      - MYSQL_DATABASE=SANDBOX
-      - MYSQL_USER=etl
-      - MYSQL_PASSWORD=etl
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
     restart: unless-stopped
     networks:
       - storages
@@ -57,15 +55,38 @@ services:
       - storages
       - public
     depends_on:
-      - clickhouse_db
+      - clickhouse
     command: >
       -endpoint '0.0.0.0:24190'
-      -host 'clickhouse_db'
-      -port 8123
-      -user 'default'
-      -password ''
-      -workers ${LOCAL_CLICKHOUSE_WORKERS}
-      -log '${LOCAL_CLICKHOUSE_LOG_LEVEL}'
+      -host '${CLICKHOUSE_WRITER_HOST}'
+      -port ${CLICKHOUSE_WRITER_PORT}
+      -user '${CLICKHOUSE_WRITER_USER}'
+      -password '${CLICKHOUSE_WRITER_PASSWORD}'
+      -workers ${CLICKHOUSE_WRITER_WORKERS}
+      -log '${CLICKHOUSE_WRITER_LOG_LEVEL}'
+  
+  mysql_writer:
+    image: mysql-writer:${MYSQL_WRITER_VERSION}
+    build:
+      dockerfile: ./docker/Dockerfile
+      context: ./
+      args:
+        - STORAGE=mysql
+        - SERVICE=writer
+    restart: unless-stopped
+    networks:
+      - storages
+      - public
+    depends_on:
+      - mysql
+    command: >
+      -endpoint '0.0.0.0:24190'
+      -host '${MYSQL_WRITER_HOST}'
+      -port ${MYSQL_WRITER_PORT}
+      -user '${MYSQL_WRITER_USER}'
+      -password '${MYSQL_WRITER_PASSWORD}'
+      -workers ${MYSQL_WRITER_WORKERS}
+      -log '${MYSQL_WRITER_LOG_LEVEL}'
   
   # Data providers
   clickhouse_reader:
@@ -78,21 +99,50 @@ services:
         - SERVICE=reader
     restart: 'no'
     networks:
+      - storages
       - public
     depends_on:
       - clickhouse_writer
     command: >
-      -comsumer '${PUBLIC_CLICKHOUSE_CONSUMER}'
-      -host '${PUBLIC_CLICKHOUSE_HOST}'
-      -port ${PUBLIC_CLICKHOUSE_PORT}
-      -user '${PUBLIC_CLICKHOUSE_USER}'
-      -password '${PUBLIC_CLICKHOUSE_PASSWORD}'
-      -from '${PUBLIC_CLICKHOUSE_FROM}'
-      -to '${PUBLIC_CLICKHOUSE_TO}'
-      -order '${PUBLIC_CLICKHOUSE_ORDER}'
-      -batch ${PUBLIC_CLICKHOUSE_BATCH}
-      -window "${PUBLIC_CLICKHOUSE_WINDOW}"
-      -workers ${PUBLIC_CLICKHOUSE_WORKERS}
-      -log '${PUBLIC_CLICKHOUSE_LOG_LEVEL}'
+      -comsumer '${CLICKHOUSE_READER_CONSUMER}'
+      -host '${CLICKHOUSE_READER_HOST}'
+      -port ${CLICKHOUSE_READER_PORT}
+      -user '${CLICKHOUSE_READER_USER}'
+      -password '${CLICKHOUSE_READER_PASSWORD}'
+      -from '${CLICKHOUSE_READER_FROM}'
+      -to '${CLICKHOUSE_READER_TO}'
+      -order '${CLICKHOUSE_READER_ORDER}'
+      -batch ${CLICKHOUSE_READER_BATCH}
+      -window "${CLICKHOUSE_READER_WINDOW}"
+      -workers ${CLICKHOUSE_READER_WORKERS}
+      -log '${CLICKHOUSE_READER_LOG_LEVEL}'
+  
+  mysql_reader:
+    image: mysql-reader:${MYSQL_READER_VERSION}
+    build:
+      dockerfile: ./docker/Dockerfile
+      context: ./
+      args:
+        - STORAGE=mysql
+        - SERVICE=reader
+    restart: 'no'
+    networks:
+      - storages
+      - public
+    depends_on:
+      - mysql_writer
+    command: >
+      -comsumer '${MYSQL_READER_CONSUMER}'
+      -host '${MYSQL_READER_HOST}'
+      -port ${MYSQL_READER_PORT}
+      -user '${MYSQL_READER_USER}'
+      -password '${MYSQL_READER_PASSWORD}'
+      -from '${MYSQL_READER_FROM}'
+      -to '${MYSQL_READER_TO}'
+      -order '${MYSQL_READER_ORDER}'
+      -batch ${MYSQL_READER_BATCH}
+      -window "${MYSQL_READER_WINDOW}"
+      -workers ${MYSQL_READER_WORKERS}
+      -log '${MYSQL_READER_LOG_LEVEL}'
     
     

@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"etl"
-	"etl/clickhouse"
+	"etl/mysql"
 	"flag"
 	"fmt"
 	"strings"
@@ -17,8 +17,8 @@ const version = "v0.1.0"
 var (
 	comsumer  = flag.String("comsumer", "0.0.0.0:24190", "gRPC endpoint of data consumer.")
 	host      = flag.String("host", "0.0.0.0", "Connection host.")
-	port      = flag.Uint("port", 8123, "Connection port.")
-	user      = flag.String("user", "default", "User for connecting.")
+	port      = flag.Uint("port", 3306, "Connection port.")
+	user      = flag.String("user", "root", "User for connecting.")
 	password  = flag.String("password", "", "Password of an user.")
 	tableFrom = flag.String("from", "", "Source table in format `data_base.table_name`.")
 	tableTo   = flag.String("to", "", "Target table in format `data_base.table_name`.")
@@ -68,16 +68,20 @@ func main() {
 	}
 	defer grpcConn.Close()
 
+	conn := &mysql.Conn{
+		Address:  fmt.Sprintf("tcp(%s:%d)/", *host, *port),
+		User:     *user,
+		Password: *password,
+		PoolSize: int(*workers),
+	}
+	defer conn.Close()
+
 	provider := etl.DataProvider{
 		Target:     *tableTo,
 		Workers:    int(*workers),
 		GrpcClient: grpcConn,
-		Conn: &clickhouse.Conn{
-			Address:  fmt.Sprintf("http://%s:%d", *host, *port),
-			User:     *user,
-			Password: *password,
-		},
-		Generator: sqlGenerator,
+		Conn:       conn,
+		Generator:  sqlGenerator,
 	}
 
 	provider.Up()

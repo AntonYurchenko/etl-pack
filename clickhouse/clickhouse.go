@@ -3,6 +3,7 @@ package clickhouse
 import (
 	"encoding/json"
 	"errors"
+	"etl/clickhouse/types"
 	"etl/contract"
 	"fmt"
 	"io"
@@ -81,35 +82,35 @@ func (c *Conn) Do(query string) (batch *contract.Batch, err error) {
 // Batch is a structure for parsing result of SQL from clickhouse.
 type Batch struct {
 	Meta Meta `json:"meta"`
-	Data Data `json:"data"`
+	Rows Rows `json:"data"`
 }
 type Meta []map[string]string
-type Data []map[string]any
+type Rows []map[string]any
 
 // convert describes logic of convertation *Batch to *contract.Batch
-func convert(chBatch *Batch) (wrBatch *contract.Batch) {
+func convert(data *Batch) (batch *contract.Batch) {
 
-	wrBatch = new(contract.Batch)
-	wrBatch.Names, wrBatch.Types = flatMeta(chBatch.Meta)
-	wrBatch.Values = make([][]byte, 0, len(wrBatch.Names))
+	batch = new(contract.Batch)
+	batch.Names, batch.Types = flatMeta(data.Meta)
+	batch.Values = make([][]byte, 0, len(batch.Names))
 
-	for _, row := range chBatch.Data {
+	for _, row := range data.Rows {
 
-		for idx, name := range wrBatch.Names {
+		for idx, name := range batch.Names {
 
-			value, err := transform(wrBatch.Types[idx], fmt.Sprint(row[name]))
+			value, err := types.ToUniversal(batch.Types[idx], fmt.Sprint(row[name]))
 			if err != nil {
 				panic(err)
 			}
-			wrBatch.Values = append(wrBatch.Values, []byte(value))
+			batch.Values = append(batch.Values, []byte(value))
 		}
 
-		logger.DebugF("wrBatch = %v", wrBatch)
+		logger.DebugF("batch = %v", batch)
 	}
 
-	updateTypes(wrBatch.Types)
+	types.Update(batch.Types)
 
-	return wrBatch
+	return batch
 }
 
 // flatMeta returns two arrays, first with names of fields, second with data types from meta data of clickhouse.
