@@ -115,6 +115,7 @@ services:
       -batch ${CLICKHOUSE_READER_BATCH}
       -window "${CLICKHOUSE_READER_WINDOW}"
       -workers ${CLICKHOUSE_READER_WORKERS}
+      -schedule '${CLICKHOUSE_READER_SHEDULE}'
       -log '${CLICKHOUSE_READER_LOG_LEVEL}'
   
   mysql_reader:
@@ -143,6 +144,7 @@ services:
       -batch ${MYSQL_READER_BATCH}
       -window "${MYSQL_READER_WINDOW}"
       -workers ${MYSQL_READER_WORKERS}
+      -schedule '${MYSQL_READER_SHEDULE}'
       -log '${MYSQL_READER_LOG_LEVEL}'
     
     
