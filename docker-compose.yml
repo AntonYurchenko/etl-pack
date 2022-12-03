@@ -111,6 +111,7 @@ services:
       -password '${CLICKHOUSE_READER_PASSWORD}'
       -from '${CLICKHOUSE_READER_FROM}'
       -to '${CLICKHOUSE_READER_TO}'
+      -fields '${CLICKHOUSE_READER_FIELDS}'
       -order '${CLICKHOUSE_READER_ORDER}'
       -batch ${CLICKHOUSE_READER_BATCH}
       -window "${CLICKHOUSE_READER_WINDOW}"
@@ -140,6 +141,7 @@ services:
       -password '${MYSQL_READER_PASSWORD}'
       -from '${MYSQL_READER_FROM}'
       -to '${MYSQL_READER_TO}'
+      -fields '${MYSQL_READER_FIELDS}'
       -order '${MYSQL_READER_ORDER}'
       -batch ${MYSQL_READER_BATCH}
       -window "${MYSQL_READER_WINDOW}"
