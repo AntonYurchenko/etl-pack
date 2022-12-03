@@ -6,7 +6,10 @@ import (
 	"etl/mysql"
 	"flag"
 	"fmt"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	logger "github.com/AntonYurchenko/log-go"
 )
@@ -25,8 +28,9 @@ var (
 	fields    = flag.String("fields", "*", "List of fields from source table in format `field1,field2,...,fieldN`.")
 	order     = flag.String("order", "", "Ordering column name or some names split by comma.")
 	batch     = flag.Uint("batch", 1000, "Size of selected batch in one query.")
-	workers   = flag.Uint("workers", 1, "Count of workers which will execute queries on clickhouse.")
 	window    = flag.String("window", "", "Window of data for processing in format `column:from:to`.")
+	workers   = flag.Uint("workers", 1, "Count of workers which will execute queries on clickhouse.")
+	schedule  = flag.String("schedule", "@midnight", "Cron rule for starting a reader.")
 	log       = flag.String("log", "INFO", "Level of logger.")
 )
 
@@ -41,10 +45,11 @@ func init() {
 	logger.InfoF("Source table: %s", *tableFrom)
 	logger.InfoF("Target table: %s", *tableTo)
 	logger.InfoF("Selected fields: %s", *fields)
-	logger.InfoF("Workers: %d", *workers)
 	logger.InfoF("Reading batch size: %d", *batch)
 	logger.InfoF("Ordering by: %s", *order)
 	logger.InfoF("Window of data for processing is: %s", *window)
+	logger.InfoF("Workers %d", *workers)
+	logger.InfoF("Schedule: %s", *schedule)
 
 	// Check of arguments.
 	var errorMessage string
@@ -63,6 +68,8 @@ func init() {
 				errorMessage = "invalid list of fields"
 			}
 		}
+	case *schedule == "":
+		errorMessage = "schedule should be not empty"
 	}
 	if errorMessage != "" {
 		panic(errorMessage)
@@ -89,12 +96,26 @@ func main() {
 	provider := etl.DataProvider{
 		Target:     *tableTo,
 		Workers:    int(*workers),
+		CronRule:   *schedule,
 		GrpcClient: grpcConn,
 		Conn:       conn,
 		Generator:  sqlGenerator,
 	}
 
-	provider.Up()
+	// Waiting of an exit signal.
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		defer cancel()
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+		<-sig
+	}()
+
+	// Start of a reader as service.
+	if err := provider.Up(ctx); err != nil {
+		panic(err)
+	}
+
 	logger.Info("Have a good day :)")
 }
 

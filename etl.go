@@ -9,6 +9,7 @@ import (
 	"time"
 
 	logger "github.com/AntonYurchenko/log-go"
+	"github.com/robfig/cron/v3"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -161,13 +162,35 @@ type InsertBatch struct {
 type DataProvider struct {
 	Target    string
 	Workers   int
+	CronRule  string
 	Generator func(ctx context.Context, workers int) (queries <-chan string)
 	Conn
 	*GrpcClient
 }
 
 // Up is a start function.
-func (dp *DataProvider) Up() {
+func (dp *DataProvider) Up(ctx context.Context) (err error) {
+	scheduler := cron.New()
+
+	// Registration of an job and start cron.
+	logger.InfoF("Registration a job in scheduler with cron rule: '%s'", dp.CronRule)
+	jobID, err := scheduler.AddFunc(dp.CronRule, dp.start)
+	if err != nil {
+		return err
+	}
+	logger.DebugF("jobID = %v", jobID)
+	scheduler.Start()
+
+	// Waiting of extit from application.
+	<-ctx.Done()
+	scheduler.Remove(jobID)
+	scheduler.Stop()
+	logger.InfoF("Sheduler has been stoped.")
+	return nil
+}
+
+// Up is a start function.
+func (dp *DataProvider) start() {
 	ts := time.Now()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -178,7 +201,7 @@ func (dp *DataProvider) Up() {
 	batches := dp.executor(queries)
 	done := dp.sender(batches)
 
-	// Waiting of processing
+	// Waiting of processing.
 	<-done
 	logger.InfoF("A reader has been successfull finished [ DURATION: %s ]", time.Since(ts))
 }

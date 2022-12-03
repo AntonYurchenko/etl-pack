@@ -25,5 +25,5 @@ COPY --from=builder --chown=runner:runner /code/service /usr/bin/service
 ## Start of application.
 ENTRYPOINT ["service"]
 EXPOSE 24190
-STOPSIGNAL SIGQUIT
+STOPSIGNAL SIGTERM
 CMD [""]
