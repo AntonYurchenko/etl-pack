@@ -22,6 +22,7 @@ var (
 	password  = flag.String("password", "", "Password of an user.")
 	tableFrom = flag.String("from", "", "Source table in format `data_base.table_name`.")
 	tableTo   = flag.String("to", "", "Target table in format `data_base.table_name`.")
+	fields    = flag.String("fields", "*", "List of fields from source table in format `field1,field2,...,fieldN`.")
 	order     = flag.String("order", "", "Ordering column name or some names split by comma.")
 	batch     = flag.Uint("batch", 1000, "Size of selected batch in one query.")
 	workers   = flag.Uint("workers", 1, "Count of workers which will execute queries on clickhouse.")
@@ -34,13 +35,14 @@ func init() {
 	flag.Parse()
 	logger.SetLevelStr(*log)
 
-	logger.InfoF("Start of clickhouse reader version %s", version)
-	logger.InfoF("Endpoint of data consumer %s", *comsumer)
-	logger.InfoF("Clickhouse endpoint %s:%d", *host, *port)
-	logger.InfoF("Source table %s", *tableFrom)
-	logger.InfoF("Target table %s", *tableTo)
-	logger.InfoF("Workers %d", *workers)
-	logger.InfoF("Reading batch size %d", *batch)
+	logger.InfoF("Start of clickhouse reader version: %s", version)
+	logger.InfoF("Endpoint of data consumer: %s", *comsumer)
+	logger.InfoF("Clickhouse endpoint: %s:%d", *host, *port)
+	logger.InfoF("Source table: %s", *tableFrom)
+	logger.InfoF("Target table: %s", *tableTo)
+	logger.InfoF("Selected fields: %s", *fields)
+	logger.InfoF("Workers: %d", *workers)
+	logger.InfoF("Reading batch size: %d", *batch)
 	logger.InfoF("Ordering by: %s", *order)
 	logger.InfoF("Window of data for processing is: %s", *window)
 
@@ -48,11 +50,19 @@ func init() {
 	var errorMessage string
 	switch {
 	case *user == "":
-		errorMessage = "User should be not empty"
+		errorMessage = "user should be not empty"
 	case *tableFrom == "":
-		errorMessage = "Source table should be not empty"
+		errorMessage = "source table should be not empty"
 	case *tableTo == "":
-		errorMessage = "Target table should be not empty"
+		errorMessage = "target table should be not empty"
+	case *fields == "":
+		errorMessage = "list of fields should be not empty"
+	case *fields != "*":
+		for _, field := range strings.Split(*fields, ",") {
+			if strings.Contains(strings.TrimSpace(field), " ") {
+				errorMessage = "invalid list of fields"
+			}
+		}
 	}
 	if errorMessage != "" {
 		panic(errorMessage)
@@ -92,10 +102,7 @@ func sqlGenerator(ctx context.Context, workers int) (queries <-chan string) {
 		defer close(out)
 
 		// Creation of WHERE section.
-		filter, err := createFilter(*window)
-		if err != nil {
-			panic(err)
-		}
+		filter := createFilter(*window)
 		logger.DebugF("filter = %s", filter)
 
 		// Creation of ORDER BY section.
@@ -111,7 +118,7 @@ func sqlGenerator(ctx context.Context, workers int) (queries <-chan string) {
 			select {
 			case <-ctx.Done():
 				break loop
-			case out <- fmt.Sprintf("SELECT * FROM %s %s %s LIMIT %d, %d", *tableFrom, filter, orderBy, offset, batchSize):
+			case out <- fmt.Sprintf("SELECT %s FROM %s %s %s LIMIT %d, %d", *fields, *tableFrom, filter, orderBy, offset, batchSize):
 				offset += batchSize
 				logger.DebugF("offset = %d", offset)
 			}
@@ -122,15 +129,15 @@ func sqlGenerator(ctx context.Context, workers int) (queries <-chan string) {
 }
 
 // createFilter generates WHERE section of SQL query.
-func createFilter(window string) (where string, err error) {
+func createFilter(window string) (where string) {
 	if window == "" {
-		return "", nil
+		return ""
 	}
 	arr := strings.SplitN(window, ":", 3)
 	if len(arr) != 3 {
-		return "", fmt.Errorf("invalid format of window `%s`", window)
+		return ""
 	}
-	return fmt.Sprintf("WHERE %s BETWEEN %s AND %s", arr[0], arr[1], arr[2]), nil
+	return fmt.Sprintf("WHERE %s BETWEEN %s AND %s", arr[0], arr[1], arr[2])
 }
 
 // createOrderBy generates ORDER BY section of SQL query.
