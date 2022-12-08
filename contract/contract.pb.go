@@ -220,6 +220,134 @@ func (x *Status) GetSuccess() int32 {
 	return 0
 }
 
+// SnapshotFilter contains name of column and min/max values for definition of a snapshot size.
+type SnapshotFilter struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Fields string `protobuf:"bytes,1,opt,name=fields,proto3" json:"fields,omitempty"`
+	Target string `protobuf:"bytes,2,opt,name=target,proto3" json:"target,omitempty"`
+	Column string `protobuf:"bytes,3,opt,name=column,proto3" json:"column,omitempty"`
+	From   string `protobuf:"bytes,4,opt,name=from,proto3" json:"from,omitempty"`
+	To     string `protobuf:"bytes,5,opt,name=to,proto3" json:"to,omitempty"`
+}
+
+func (x *SnapshotFilter) Reset() {
+	*x = SnapshotFilter{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_contract_contract_proto_msgTypes[3]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *SnapshotFilter) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SnapshotFilter) ProtoMessage() {}
+
+func (x *SnapshotFilter) ProtoReflect() protoreflect.Message {
+	mi := &file_contract_contract_proto_msgTypes[3]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SnapshotFilter.ProtoReflect.Descriptor instead.
+func (*SnapshotFilter) Descriptor() ([]byte, []int) {
+	return file_contract_contract_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *SnapshotFilter) GetFields() string {
+	if x != nil {
+		return x.Fields
+	}
+	return ""
+}
+
+func (x *SnapshotFilter) GetTarget() string {
+	if x != nil {
+		return x.Target
+	}
+	return ""
+}
+
+func (x *SnapshotFilter) GetColumn() string {
+	if x != nil {
+		return x.Column
+	}
+	return ""
+}
+
+func (x *SnapshotFilter) GetFrom() string {
+	if x != nil {
+		return x.From
+	}
+	return ""
+}
+
+func (x *SnapshotFilter) GetTo() string {
+	if x != nil {
+		return x.To
+	}
+	return ""
+}
+
+// SnapshotHash contains a set of hash all rows of snapshot.
+type SnapshotHash struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Set map[string]bool `protobuf:"bytes,1,rep,name=Set,proto3" json:"Set,omitempty" protobuf_key:"bytes,1,opt,name=key,proto3" protobuf_val:"varint,2,opt,name=value,proto3"`
+}
+
+func (x *SnapshotHash) Reset() {
+	*x = SnapshotHash{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_contract_contract_proto_msgTypes[4]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *SnapshotHash) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SnapshotHash) ProtoMessage() {}
+
+func (x *SnapshotHash) ProtoReflect() protoreflect.Message {
+	mi := &file_contract_contract_proto_msgTypes[4]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SnapshotHash.ProtoReflect.Descriptor instead.
+func (*SnapshotHash) Descriptor() ([]byte, []int) {
+	return file_contract_contract_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *SnapshotHash) GetSet() map[string]bool {
+	if x != nil {
+		return x.Set
+	}
+	return nil
+}
+
 var File_contract_contract_proto protoreflect.FileDescriptor
 
 var file_contract_contract_proto_rawDesc = []byte{
@@ -237,11 +365,29 @@ var file_contract_contract_proto_rawDesc = []byte{
 	0x73, 0x12, 0x14, 0x0a, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09,
 	0x52, 0x05, 0x65, 0x72, 0x72, 0x6f, 0x72, 0x12, 0x18, 0x0a, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65,
 	0x73, 0x73, 0x18, 0x02, 0x20, 0x01, 0x28, 0x05, 0x52, 0x07, 0x73, 0x75, 0x63, 0x63, 0x65, 0x73,
-	0x73, 0x32, 0x33, 0x0a, 0x0c, 0x44, 0x61, 0x74, 0x61, 0x43, 0x6f, 0x6e, 0x73, 0x75, 0x6d, 0x65,
+	0x73, 0x22, 0x7c, 0x0a, 0x0e, 0x53, 0x6e, 0x61, 0x70, 0x73, 0x68, 0x6f, 0x74, 0x46, 0x69, 0x6c,
+	0x74, 0x65, 0x72, 0x12, 0x16, 0x0a, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x18, 0x01, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x06, 0x66, 0x69, 0x65, 0x6c, 0x64, 0x73, 0x12, 0x16, 0x0a, 0x06, 0x74,
+	0x61, 0x72, 0x67, 0x65, 0x74, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x52, 0x06, 0x74, 0x61, 0x72,
+	0x67, 0x65, 0x74, 0x12, 0x16, 0x0a, 0x06, 0x63, 0x6f, 0x6c, 0x75, 0x6d, 0x6e, 0x18, 0x03, 0x20,
+	0x01, 0x28, 0x09, 0x52, 0x06, 0x63, 0x6f, 0x6c, 0x75, 0x6d, 0x6e, 0x12, 0x12, 0x0a, 0x04, 0x66,
+	0x72, 0x6f, 0x6d, 0x18, 0x04, 0x20, 0x01, 0x28, 0x09, 0x52, 0x04, 0x66, 0x72, 0x6f, 0x6d, 0x12,
+	0x0e, 0x0a, 0x02, 0x74, 0x6f, 0x18, 0x05, 0x20, 0x01, 0x28, 0x09, 0x52, 0x02, 0x74, 0x6f, 0x22,
+	0x70, 0x0a, 0x0c, 0x53, 0x6e, 0x61, 0x70, 0x73, 0x68, 0x6f, 0x74, 0x48, 0x61, 0x73, 0x68, 0x12,
+	0x28, 0x0a, 0x03, 0x53, 0x65, 0x74, 0x18, 0x01, 0x20, 0x03, 0x28, 0x0b, 0x32, 0x16, 0x2e, 0x53,
+	0x6e, 0x61, 0x70, 0x73, 0x68, 0x6f, 0x74, 0x48, 0x61, 0x73, 0x68, 0x2e, 0x53, 0x65, 0x74, 0x45,
+	0x6e, 0x74, 0x72, 0x79, 0x52, 0x03, 0x53, 0x65, 0x74, 0x1a, 0x36, 0x0a, 0x08, 0x53, 0x65, 0x74,
+	0x45, 0x6e, 0x74, 0x72, 0x79, 0x12, 0x10, 0x0a, 0x03, 0x6b, 0x65, 0x79, 0x18, 0x01, 0x20, 0x01,
+	0x28, 0x09, 0x52, 0x03, 0x6b, 0x65, 0x79, 0x12, 0x14, 0x0a, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65,
+	0x18, 0x02, 0x20, 0x01, 0x28, 0x08, 0x52, 0x05, 0x76, 0x61, 0x6c, 0x75, 0x65, 0x3a, 0x02, 0x38,
+	0x01, 0x32, 0x64, 0x0a, 0x0c, 0x44, 0x61, 0x74, 0x61, 0x43, 0x6f, 0x6e, 0x73, 0x75, 0x6d, 0x65,
 	0x72, 0x12, 0x23, 0x0a, 0x08, 0x45, 0x78, 0x63, 0x68, 0x61, 0x6e, 0x67, 0x65, 0x12, 0x08, 0x2e,
 	0x4d, 0x65, 0x73, 0x73, 0x61, 0x67, 0x65, 0x1a, 0x07, 0x2e, 0x53, 0x74, 0x61, 0x74, 0x75, 0x73,
-	0x22, 0x00, 0x28, 0x01, 0x30, 0x01, 0x42, 0x0c, 0x5a, 0x0a, 0x2e, 0x2f, 0x63, 0x6f, 0x6e, 0x74,
-	0x72, 0x61, 0x63, 0x74, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x22, 0x00, 0x28, 0x01, 0x30, 0x01, 0x12, 0x2f, 0x0a, 0x0b, 0x47, 0x65, 0x74, 0x53, 0x6e, 0x61,
+	0x70, 0x73, 0x68, 0x6f, 0x74, 0x12, 0x0f, 0x2e, 0x53, 0x6e, 0x61, 0x70, 0x73, 0x68, 0x6f, 0x74,
+	0x46, 0x69, 0x6c, 0x74, 0x65, 0x72, 0x1a, 0x0d, 0x2e, 0x53, 0x6e, 0x61, 0x70, 0x73, 0x68, 0x6f,
+	0x74, 0x48, 0x61, 0x73, 0x68, 0x22, 0x00, 0x42, 0x0c, 0x5a, 0x0a, 0x2e, 0x2f, 0x63, 0x6f, 0x6e,
+	0x74, 0x72, 0x61, 0x63, 0x74, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
 }
 
 var (
@@ -256,21 +402,27 @@ func file_contract_contract_proto_rawDescGZIP() []byte {
 	return file_contract_contract_proto_rawDescData
 }
 
-var file_contract_contract_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
+var file_contract_contract_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
 var file_contract_contract_proto_goTypes = []interface{}{
-	(*Message)(nil), // 0: Message
-	(*Batch)(nil),   // 1: Batch
-	(*Status)(nil),  // 2: Status
+	(*Message)(nil),        // 0: Message
+	(*Batch)(nil),          // 1: Batch
+	(*Status)(nil),         // 2: Status
+	(*SnapshotFilter)(nil), // 3: SnapshotFilter
+	(*SnapshotHash)(nil),   // 4: SnapshotHash
+	nil,                    // 5: SnapshotHash.SetEntry
 }
 var file_contract_contract_proto_depIdxs = []int32{
 	1, // 0: Message.batch:type_name -> Batch
-	0, // 1: DataConsumer.Exchange:input_type -> Message
-	2, // 2: DataConsumer.Exchange:output_type -> Status
-	2, // [2:3] is the sub-list for method output_type
-	1, // [1:2] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	5, // 1: SnapshotHash.Set:type_name -> SnapshotHash.SetEntry
+	0, // 2: DataConsumer.Exchange:input_type -> Message
+	3, // 3: DataConsumer.GetSnapshot:input_type -> SnapshotFilter
+	2, // 4: DataConsumer.Exchange:output_type -> Status
+	4, // 5: DataConsumer.GetSnapshot:output_type -> SnapshotHash
+	4, // [4:6] is the sub-list for method output_type
+	2, // [2:4] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_contract_contract_proto_init() }
@@ -315,6 +467,30 @@ func file_contract_contract_proto_init() {
 				return nil
 			}
 		}
+		file_contract_contract_proto_msgTypes[3].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*SnapshotFilter); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_contract_contract_proto_msgTypes[4].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*SnapshotHash); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -322,7 +498,7 @@ func file_contract_contract_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_contract_contract_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   3,
+			NumMessages:   6,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

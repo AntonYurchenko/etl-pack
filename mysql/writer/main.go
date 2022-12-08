@@ -1,17 +1,19 @@
 package main
 
 import (
+	"context"
 	"etl"
 	"etl/contract"
 	"etl/mysql"
 	"etl/mysql/types"
 	"flag"
 	"fmt"
-	"net"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	logger "github.com/AntonYurchenko/log-go"
-	"google.golang.org/grpc"
 )
 
 const version = "v0.1.0"
@@ -49,12 +51,6 @@ func init() {
 
 func main() {
 
-	// Initialisation.
-	lis, err := net.Listen("tcp", *endpoint)
-	if err != nil {
-		panic(err)
-	}
-
 	conn := &mysql.Conn{
 		Address:  fmt.Sprintf("tcp(%s:%d)/", *host, *port),
 		User:     *user,
@@ -63,20 +59,29 @@ func main() {
 	}
 	defer conn.Close()
 
-	consumer := etl.DataConsumer{
-		Conn:      conn,
-		Workers:   int(*workers),
-		Converter: messageToQuery,
+	consumer := etl.Consumer{
+		Endpoint:      *endpoint,
+		Conn:          conn,
+		Workers:       int(*workers),
+		Converter:     messageToQuery,
+		SnapshotQuery: createSnapshotQuery,
 	}
 
-	opts := []grpc.ServerOption{}
-	server := grpc.NewServer(opts...)
-	contract.RegisterDataConsumerServer(server, &consumer)
+	// Waiting of an exit signal.
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		defer cancel()
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+		<-sig
+	}()
 
 	// Up gRPC server.
-	if err = server.Serve(lis); err != nil {
+	if err := consumer.Up(ctx); err != nil {
 		panic(err)
 	}
+
+	logger.Info("Have a good day :)")
 
 }
 
@@ -115,4 +120,13 @@ func createHeader(target string, names []string) (header string) {
 		header = fmt.Sprintf("INSERT INTO %s (%s) VALUES", target, strings.Join(names, ","))
 	}
 	return header
+}
+
+// createSnapshotQuery returns a query for recieving a snapshot.
+func createSnapshotQuery(fields, table, cursor, cursorMin, cursorMax string) (query string) {
+	var filter string
+	if cursor != "" && cursorMin != "" && cursorMax != "" {
+		filter = fmt.Sprintf("WHERE %s BETWEEN %s AND %s", cursor, cursorMin, cursorMax)
+	}
+	return fmt.Sprintf("SELECT %s FROM %s %s", fields, table, filter)
 }

@@ -1,17 +1,19 @@
 package main
 
 import (
+	"context"
 	"etl"
 	"etl/clickhouse"
 	"etl/clickhouse/types"
 	"etl/contract"
 	"flag"
 	"fmt"
-	"net"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	logger "github.com/AntonYurchenko/log-go"
-	"google.golang.org/grpc"
 )
 
 const version = "v0.1.0"
@@ -49,30 +51,33 @@ func init() {
 
 func main() {
 
-	// Initialisation.
-	lis, err := net.Listen("tcp", *endpoint)
-	if err != nil {
-		panic(err)
-	}
-
-	consumer := etl.DataConsumer{
+	consumer := etl.Consumer{
+		Endpoint: *endpoint,
 		Conn: &clickhouse.Conn{
 			Address:  fmt.Sprintf("http://%s:%d", *host, *port),
 			User:     *user,
 			Password: *password,
 		},
-		Workers:   int(*workers),
-		Converter: messageToQuery,
+		Workers:           int(*workers),
+		Converter:         messageToQuery,
+		SnapshotQuery: createSnapshotQuery,
 	}
 
-	opts := []grpc.ServerOption{}
-	server := grpc.NewServer(opts...)
-	contract.RegisterDataConsumerServer(server, &consumer)
+	// Waiting of an exit signal.
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		defer cancel()
+		sig := make(chan os.Signal, 1)
+		signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+		<-sig
+	}()
 
 	// Up gRPC server.
-	if err = server.Serve(lis); err != nil {
+	if err := consumer.Up(ctx); err != nil {
 		panic(err)
 	}
+
+	logger.Info("Have a good day :)")
 
 }
 
@@ -80,7 +85,11 @@ func main() {
 func messageToQuery(message *contract.Message) (query etl.InsertBatch) {
 	count := len(message.Batch.Values) / len(message.Batch.Names)
 	logger.InfoF("%d row(s) have been read from stream", count)
-	sql := createHeader(message.Target, message.Batch.Names)
+
+	sql := fmt.Sprintf("INSERT INTO %s FORMAT TSV", message.Target)
+	if len(message.Batch.Names) != 0 {
+		sql = fmt.Sprintf("INSERT INTO %s (%s) FORMAT TSV", message.Target, strings.Join(message.Batch.Names, ","))
+	}
 
 	// Adding all values of batch to sql query.
 	for idx, value := range message.Batch.Values {
@@ -100,11 +109,11 @@ func messageToQuery(message *contract.Message) (query etl.InsertBatch) {
 	return etl.InsertBatch{Query: sql, CountRows: count}
 }
 
-// createHeader creates a header of SQL insert for clickhouse.
-func createHeader(target string, names []string) (header string) {
-	header = fmt.Sprintf("INSERT INTO %s FORMAT TSV", target)
-	if len(names) != 0 {
-		header = fmt.Sprintf("INSERT INTO %s (%s) FORMAT TSV", target, strings.Join(names, ","))
+// createSnapshotQuery returns a query for recieving a snapshot.
+func createSnapshotQuery(fields, table, cursor, cursorMin, cursorMax string) (query string) {
+	var filter string
+	if cursor != "" && cursorMin != "" && cursorMax != "" {
+		filter = fmt.Sprintf("WHERE %s BETWEEN %s AND %s", cursor, cursorMin, cursorMax)
 	}
-	return header
+	return fmt.Sprintf("SELECT %s FROM %s %s", fields, table, filter)
 }

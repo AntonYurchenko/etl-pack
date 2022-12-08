@@ -52,9 +52,26 @@ message Status {
     int32 success = 2;
 }
 
+// SnapshotFilter contains name of column and min/max values for definition of a snapshot size.
+message SnapshotFilter {
+    string fields = 1;
+    string target = 2;
+    string column = 3;
+    string from = 4;
+    string to = 5;
+}
+
+// SnapshotHash contains a set of hash all rows of snapshot.
+message SnapshotHash {
+    map<string, bool> Set = 1;
+}
+
 // DataConsumer is an universal data gateway.
 service DataConsumer {
 
     // It reads messages with data from stream and writes statuses to stream as response.
     rpc Exchange(stream Message) returns (stream Status) {}
+
+    // It returns a set of hash all rows of snapshot from target entity.
+    rpc GetSnapshot(SnapshotFilter) returns (SnapshotHash) {}
 }
