@@ -24,6 +24,8 @@ const _ = grpc.SupportPackageIsVersion7
 type DataConsumerClient interface {
 	// It reads messages with data from stream and writes statuses to stream as response.
 	Exchange(ctx context.Context, opts ...grpc.CallOption) (DataConsumer_ExchangeClient, error)
+	// It returns a set of hash all rows of snapshot from target entity.
+	GetSnapshot(ctx context.Context, in *SnapshotFilter, opts ...grpc.CallOption) (*SnapshotHash, error)
 }
 
 type dataConsumerClient struct {
@@ -65,12 +67,23 @@ func (x *dataConsumerExchangeClient) Recv() (*Status, error) {
 	return m, nil
 }
 
+func (c *dataConsumerClient) GetSnapshot(ctx context.Context, in *SnapshotFilter, opts ...grpc.CallOption) (*SnapshotHash, error) {
+	out := new(SnapshotHash)
+	err := c.cc.Invoke(ctx, "/DataConsumer/GetSnapshot", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DataConsumerServer is the server API for DataConsumer service.
 // All implementations must embed UnimplementedDataConsumerServer
 // for forward compatibility
 type DataConsumerServer interface {
 	// It reads messages with data from stream and writes statuses to stream as response.
 	Exchange(DataConsumer_ExchangeServer) error
+	// It returns a set of hash all rows of snapshot from target entity.
+	GetSnapshot(context.Context, *SnapshotFilter) (*SnapshotHash, error)
 	mustEmbedUnimplementedDataConsumerServer()
 }
 
@@ -80,6 +93,9 @@ type UnimplementedDataConsumerServer struct {
 
 func (UnimplementedDataConsumerServer) Exchange(DataConsumer_ExchangeServer) error {
 	return status.Errorf(codes.Unimplemented, "method Exchange not implemented")
+}
+func (UnimplementedDataConsumerServer) GetSnapshot(context.Context, *SnapshotFilter) (*SnapshotHash, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetSnapshot not implemented")
 }
 func (UnimplementedDataConsumerServer) mustEmbedUnimplementedDataConsumerServer() {}
 
@@ -120,13 +136,36 @@ func (x *dataConsumerExchangeServer) Recv() (*Message, error) {
 	return m, nil
 }
 
+func _DataConsumer_GetSnapshot_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SnapshotFilter)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DataConsumerServer).GetSnapshot(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/DataConsumer/GetSnapshot",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DataConsumerServer).GetSnapshot(ctx, req.(*SnapshotFilter))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // DataConsumer_ServiceDesc is the grpc.ServiceDesc for DataConsumer service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
 var DataConsumer_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "DataConsumer",
 	HandlerType: (*DataConsumerServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "GetSnapshot",
+			Handler:    _DataConsumer_GetSnapshot_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Exchange",

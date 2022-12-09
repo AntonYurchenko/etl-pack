@@ -30,14 +30,23 @@ var (
 	batch     = flag.Uint("batch", 1000, "Size of selected batch in one query.")
 	window    = flag.String("window", "", "Window of data for processing in format `column:from:to`.")
 	workers   = flag.Uint("workers", 1, "Count of workers which will execute queries on clickhouse.")
+	increment = flag.Bool("increment", false, "If increment is true batch will deduplucate before sending.")
 	schedule  = flag.String("schedule", "@midnight", "Cron rule for starting a reader.")
 	log       = flag.String("log", "INFO", "Level of logger.")
+	cursor    string
+	cursorMin string
+	cursorMax string
 )
 
 // Reading of arguments.
 func init() {
 	flag.Parse()
 	logger.SetLevelStr(*log)
+
+	arr := strings.SplitN(*window, ":", 3)
+	if len(arr) == 3 {
+		cursor, cursorMin, cursorMax = arr[0], arr[1], arr[2]
+	}
 
 	logger.InfoF("Start of clickhouse reader version: %s", version)
 	logger.InfoF("Endpoint of data consumer: %s", *comsumer)
@@ -47,8 +56,9 @@ func init() {
 	logger.InfoF("Selected fields: %s", *fields)
 	logger.InfoF("Reading batch size: %d", *batch)
 	logger.InfoF("Ordering by: %s", *order)
-	logger.InfoF("Window of data for processing is: %s", *window)
+	logger.InfoF("Window of data for processing is: (cursor: %s, from: %s, to: %s)", cursor, cursorMin, cursorMax)
 	logger.InfoF("Workers: %d", *workers)
+	logger.InfoF("Increment mode: %v", *increment)
 	logger.InfoF("Schedule: %s", *schedule)
 
 	// Check of arguments.
@@ -81,16 +91,13 @@ func init() {
 func main() {
 
 	// Initialisation.
-	grpcConn := &etl.GrpcClient{
-		Endpoint: *comsumer,
-	}
-	defer grpcConn.Close()
-
-	provider := etl.DataProvider{
-		Target:     *tableTo,
-		Workers:    int(*workers),
-		GrpcClient: grpcConn,
-		CronRule:   *schedule,
+	provider := etl.Provider{
+		Fields:    *fields,
+		Target:    *tableTo,
+		Workers:   int(*workers),
+		Increment: *increment,
+		Endpoint:  *comsumer,
+		CronRule:  *schedule,
 		Conn: &clickhouse.Conn{
 			Address:  fmt.Sprintf("http://%s:%d", *host, *port),
 			User:     *user,
@@ -125,11 +132,17 @@ func sqlGenerator(ctx context.Context, workers int) (queries <-chan string) {
 		defer close(out)
 
 		// Creation of WHERE section.
-		filter := createFilter(*window)
+		var filter string
+		if cursor != "" && cursorMin != "" && cursorMax != "" {
+			filter = fmt.Sprintf("WHERE %s BETWEEN %s AND %s", cursor, cursorMin, cursorMax)
+		}
 		logger.DebugF("filter = %s", filter)
 
 		// Creation of ORDER BY section.
-		orderBy := createOrderBy(*order)
+		var orderBy string
+		if *order != "" {
+			orderBy = fmt.Sprintf("ORDER BY %s", *order)
+		}
 		logger.DebugF("orderBy = %s", orderBy)
 
 		batchSize := int(*batch)
@@ -149,24 +162,4 @@ func sqlGenerator(ctx context.Context, workers int) (queries <-chan string) {
 	}()
 
 	return out
-}
-
-// createFilter generates WHERE section of SQL query.
-func createFilter(window string) (where string) {
-	if window == "" {
-		return ""
-	}
-	arr := strings.SplitN(window, ":", 3)
-	if len(arr) != 3 {
-		return ""
-	}
-	return fmt.Sprintf("WHERE %s BETWEEN %s AND %s", arr[0], arr[1], arr[2])
-}
-
-// createOrderBy generates ORDER BY section of SQL query.
-func createOrderBy(order string) (orderBy string) {
-	if order == "" {
-		return ""
-	}
-	return fmt.Sprintf("ORDER BY %s", order)
 }
