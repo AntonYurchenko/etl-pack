@@ -82,7 +82,8 @@ func init() {
 		errorMessage = "schedule should be not empty"
 	}
 	if errorMessage != "" {
-		panic(errorMessage)
+		logger.ErrorF("Invalid arguments, error: %s", errorMessage)
+		os.Exit(1)
 	}
 }
 
@@ -120,7 +121,8 @@ func main() {
 
 	// Start of a reader as service.
 	if err := provider.Up(ctx); err != nil {
-		panic(err)
+		logger.ErrorF("I cannot up a provider, error: %v", err)
+		os.Exit(1)
 	}
 
 	logger.Info("Have a good day :)")

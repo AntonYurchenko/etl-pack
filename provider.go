@@ -125,13 +125,14 @@ func (p *Provider) executor(queries <-chan string) (batches <-chan *contract.Bat
 
 				batch, err := p.Conn.Do(query)
 				if err != nil {
-					panic(err)
+					logger.ErrorF("Error execution of a query %s, error: %v", query, err)
+					return
 				}
 
 				count := len(batch.Values) / len(batch.Names)
 				logger.DebugF("count = %d", count)
 				if count == 0 {
-					break
+					return
 				}
 
 				out <- batch
@@ -154,6 +155,7 @@ func (p *Provider) executor(queries <-chan string) (batches <-chan *contract.Bat
 // sender is a concurrent sender to gRPC writer.
 func (p *Provider) sender(batches <-chan *contract.Batch) (done <-chan struct{}) {
 	logger.Info("Start of gRPC sender")
+	out := make(chan struct{})
 
 	// Receiving increment dictionary.
 	var incrementDictionary map[string]bool
@@ -168,16 +170,19 @@ func (p *Provider) sender(batches <-chan *contract.Batch) (done <-chan struct{})
 		}
 		snapshotHash, err := p.getSnapshot(filter)
 		if err != nil {
-			panic(err)
+			logger.ErrorF("I cannot receive shapshot, error: %v", err)
+			close(out)
+			return out
 		}
 		incrementDictionary = snapshotHash.Set
 	}
 	logger.DebugF("incrementDictionary = %v", incrementDictionary)
 
-	out := make(chan struct{})
 	outStream, err := p.newStream()
 	if err != nil {
-		panic(err)
+		logger.ErrorF("I cannot connect to consumer, error: %v", err)
+		close(out)
+		return out
 	}
 
 	// Reaging statuses.
@@ -191,12 +196,14 @@ func (p *Provider) sender(batches <-chan *contract.Batch) (done <-chan struct{})
 				return
 			}
 			if err != nil {
-				panic(err)
+				logger.ErrorF("Error of status reading: %v", err)
+				return
 			}
 			logger.DebugF("status = %v", status)
 
 			if status.Success == 0 {
-				panic(status.Error)
+				logger.ErrorF("Error of writting: %s", status.Error)
+				return
 			}
 			logger.InfoF("%d row(s) have been written", status.Success)
 			countRows <- int(status.Success)
@@ -213,7 +220,8 @@ func (p *Provider) sender(batches <-chan *contract.Batch) (done <-chan struct{})
 				message := &contract.Message{Target: p.Target, Batch: newBatch}
 				err := outStream.Send(message)
 				if err != nil {
-					panic(err)
+					logger.ErrorF("Error of sending batch to consumer: %v", err)
+					return
 				}
 			}
 		}

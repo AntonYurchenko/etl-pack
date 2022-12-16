@@ -15,7 +15,7 @@ import (
 // Consumer is an input data stream processor.
 type Consumer struct {
 	Endpoint      string
-	Converter     func(message *contract.Message) (query InsertBatch)
+	Converter     func(message *contract.Message) (query InsertBatch, err error)
 	SnapshotQuery func(fields, table, cursor, cursorMin, cursorMax string) (query string)
 	Workers       int
 	contract.UnimplementedDataConsumerServer
@@ -103,7 +103,7 @@ func (c *Consumer) Up(ctx context.Context) (err error) {
 	// Initialisation.
 	lis, err := net.Listen("tcp", c.Endpoint)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	opts := []grpc.ServerOption{}
@@ -140,7 +140,12 @@ func (c *Consumer) generator(messages <-chan *contract.Message) (queries <-chan 
 		go func() {
 			defer wg.Done()
 			for message := range messages {
-				out <- c.Converter(message)
+				insertBatch, err := c.Converter(message)
+				if err != nil {
+					logger.ErrorF("I cannot convert a data batch to query, error: %v", err)
+					return
+				}
+				out <- insertBatch
 			}
 		}()
 	}

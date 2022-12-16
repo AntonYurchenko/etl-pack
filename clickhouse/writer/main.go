@@ -45,7 +45,8 @@ func init() {
 		errorMessage = "User should be not empty"
 	}
 	if errorMessage != "" {
-		panic(errorMessage)
+		logger.ErrorF("Invalid arguments, error: %s", errorMessage)
+		os.Exit(1)
 	}
 }
 
@@ -58,8 +59,8 @@ func main() {
 			User:     *user,
 			Password: *password,
 		},
-		Workers:           int(*workers),
-		Converter:         messageToQuery,
+		Workers:       int(*workers),
+		Converter:     messageToQuery,
 		SnapshotQuery: createSnapshotQuery,
 	}
 
@@ -74,7 +75,8 @@ func main() {
 
 	// Up gRPC server.
 	if err := consumer.Up(ctx); err != nil {
-		panic(err)
+		logger.ErrorF("I cannot up a consumer, error: %v", err)
+		os.Exit(1)
 	}
 
 	logger.Info("Have a good day :)")
@@ -82,7 +84,7 @@ func main() {
 }
 
 // messageToQuery creates an insert query from message.
-func messageToQuery(message *contract.Message) (query etl.InsertBatch) {
+func messageToQuery(message *contract.Message) (query etl.InsertBatch, err error) {
 	count := len(message.Batch.Values) / len(message.Batch.Names)
 	logger.InfoF("%d row(s) have been read from stream", count)
 
@@ -101,12 +103,12 @@ func messageToQuery(message *contract.Message) (query etl.InsertBatch) {
 		}
 		strValue, err := types.FromUniversal(message.Batch.Types[typeIdx], string(value))
 		if err != nil {
-			panic(err)
+			return etl.InsertBatch{}, err
 		}
 		sql += string(strValue)
 	}
 
-	return etl.InsertBatch{Query: sql, CountRows: count}
+	return etl.InsertBatch{Query: sql, CountRows: count}, nil
 }
 
 // createSnapshotQuery returns a query for recieving a snapshot.
