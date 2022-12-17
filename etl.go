@@ -25,7 +25,7 @@ type InsertBatch struct {
 func filter(batch *contract.Batch, incDict map[string]bool) (newBatch *contract.Batch) {
 
 	// Increment mode is disabled.
-	if incDict == nil {
+	if len(incDict) == 0 {
 		return batch
 	}
 
