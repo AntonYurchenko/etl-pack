@@ -1,0 +1,2 @@
+[![Test status](https://github.com/AntonYurchenko/etl/actions/workflows/pr_check.yml/badge.svg)](https://github.com/AntonYurchenko/etl/actions/workflows/pr_check.yml)
+[![Test coverage](https://raw.githubusercontent.com/AntonYurchenko/etl/master/.github/labels/test_coverage.svg)](https://github.com/AntonYurchenko/etl/actions/workflows/pr_check.yml)
