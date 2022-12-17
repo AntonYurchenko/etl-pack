@@ -114,7 +114,7 @@ func convert(rows *sql.Rows) (batch *contract.Batch, err error) {
 			dataType := batch.Types[idx%len(batch.Types)]
 			typedValue, err := types.ToUniversal(dataType, value)
 			if err != nil {
-				panic(err)
+				return nil, err
 			}
 			batch.Values = append(batch.Values, []byte(typedValue))
 		}

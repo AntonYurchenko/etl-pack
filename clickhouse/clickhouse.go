@@ -74,7 +74,7 @@ func (c *Conn) Do(query string) (batch *contract.Batch, err error) {
 		if err != nil {
 			return nil, err
 		}
-		return convert(chBatch), nil
+		return convert(chBatch)
 	}
 	return nil, nil
 }
@@ -88,7 +88,7 @@ type Meta []map[string]string
 type Rows []map[string]any
 
 // convert describes logic of convertation *Batch to *contract.Batch
-func convert(data *Batch) (batch *contract.Batch) {
+func convert(data *Batch) (batch *contract.Batch, err error) {
 
 	batch = new(contract.Batch)
 	batch.Names, batch.Types = flatMeta(data.Meta)
@@ -100,7 +100,7 @@ func convert(data *Batch) (batch *contract.Batch) {
 
 			value, err := types.ToUniversal(batch.Types[idx], fmt.Sprint(row[name]))
 			if err != nil {
-				panic(err)
+				return nil, err
 			}
 			batch.Values = append(batch.Values, []byte(value))
 		}
@@ -110,7 +110,7 @@ func convert(data *Batch) (batch *contract.Batch) {
 
 	types.Update(batch.Types)
 
-	return batch
+	return batch, nil
 }
 
 // flatMeta returns two arrays, first with names of fields, second with data types from meta data of clickhouse.
