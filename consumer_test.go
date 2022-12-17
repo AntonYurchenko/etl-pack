@@ -35,7 +35,7 @@ func TestConsumer_Up(t *testing.T) {
 		{
 			name: "Check work of a consumer on mock source Conn",
 			fields: fields{
-				Endpoint: "0.0.0.0:24191",
+				Endpoint: "localhost:24191",
 				Converter: func(message *contract.Message) (query InsertBatch, err error) {
 					return InsertBatch{CountRows: len(message.Batch.Values)}, err
 				},

@@ -41,7 +41,7 @@ func TestProvider_start(t *testing.T) {
 				Cursor:    "test_cursor",
 				CursorMin: "0",
 				CursorMax: "10",
-				Endpoint:  "0.0.0.0:24190",
+				Endpoint:  "localhost:24190",
 				Generator: func(ctx context.Context, workers int) (queries <-chan string) {
 					out := make(chan string)
 					go func() {
