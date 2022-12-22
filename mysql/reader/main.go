@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"etl"
 	"etl/mysql"
 	"flag"
@@ -39,7 +40,7 @@ var (
 )
 
 // Reading of arguments.
-func init() {
+func readConf() (err error) {
 	flag.Parse()
 	logger.SetLevelStr(*log)
 
@@ -82,13 +83,18 @@ func init() {
 		errorMessage = "schedule should be not empty"
 	}
 	if errorMessage != "" {
-		logger.ErrorF("Invalid arguments, error: %s", errorMessage)
-		os.Exit(1)
+		return errors.New(errorMessage)
 	}
+	return nil
 }
 
 // Definition of data reading pipeline.
 func main() {
+
+	if err := readConf(); err != nil {
+		logger.ErrorF("Invalid arguments, error: %v", err)
+		os.Exit(1)
+	}
 
 	// Initialisation.
 	conn := &mysql.Conn{
