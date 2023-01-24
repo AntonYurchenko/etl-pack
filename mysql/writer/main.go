@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"etl"
 	"etl/contract"
 	"etl/mysql"
@@ -29,7 +30,8 @@ var (
 	log      = flag.String("log", "INFO", "Level of logger.")
 )
 
-func init() {
+// Reading of arguments.
+func readConf() (err error) {
 	flag.Parse()
 	logger.SetLevelStr(*log)
 
@@ -45,12 +47,17 @@ func init() {
 		errorMessage = "User should be not empty"
 	}
 	if errorMessage != "" {
-		logger.ErrorF("Invalid arguments, error: %s", errorMessage)
-		os.Exit(1)
+		return errors.New(errorMessage)
 	}
+	return nil
 }
 
 func main() {
+
+	if err := readConf(); err != nil {
+		logger.ErrorF("Invalid arguments, error: %v", err)
+		os.Exit(1)
+	}
 
 	conn := &mysql.Conn{
 		Address:  fmt.Sprintf("tcp(%s:%d)/", *host, *port),
@@ -117,9 +124,9 @@ func messageToQuery(message *contract.Message) (query etl.InsertBatch, err error
 
 // createHeader creates a header of SQL insert for MySQL.
 func createHeader(target string, names []string) (header string) {
-	header = fmt.Sprintf("INSERT INTO %s VALUES", target)
+	header = fmt.Sprintf("INSERT INTO %s VALUES ", target)
 	if len(names) != 0 {
-		header = fmt.Sprintf("INSERT INTO %s (%s) VALUES", target, strings.Join(names, ","))
+		header = fmt.Sprintf("INSERT INTO %s (%s) VALUES ", target, strings.Join(names, ","))
 	}
 	return header
 }

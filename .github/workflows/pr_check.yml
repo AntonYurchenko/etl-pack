@@ -41,9 +41,9 @@ jobs:
         env:
           percent: ${{ needs.test.outputs.coverage-percent }}
         run: |
-          if (( ${{ env.percent }} <= 30 )); then 
+          if (( $(echo "${{ env.percent }} <= 30" |bc -l) )); then 
             echo "::set-output name=val::red"
-          elif (( ${{ env.percent }} >= 80 )); then
+          elif (( $(echo "${{ env.percent }} >= 80" |bc -l) )); then 
             echo "::set-output name=val::green"
           else 
             echo "::set-output name=val::yellow"

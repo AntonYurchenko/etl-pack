@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"etl"
 	"etl/clickhouse"
 	"etl/clickhouse/types"
@@ -29,7 +30,8 @@ var (
 	log      = flag.String("log", "INFO", "Level of logger.")
 )
 
-func init() {
+// Reading of arguments.
+func readConf() (err error) {
 	flag.Parse()
 	logger.SetLevelStr(*log)
 
@@ -42,15 +44,21 @@ func init() {
 	var errorMessage string
 	switch {
 	case *user == "":
-		errorMessage = "User should be not empty"
+		errorMessage = "user should be not empty"
 	}
 	if errorMessage != "" {
-		logger.ErrorF("Invalid arguments, error: %s", errorMessage)
-		os.Exit(1)
+		return errors.New(errorMessage)
 	}
+	return nil
 }
 
+// Definition of data writing pipeline.
 func main() {
+
+	if err := readConf(); err != nil {
+		logger.ErrorF("Invalid arguments, error: %v", err)
+		os.Exit(1)
+	}
 
 	consumer := etl.Consumer{
 		Endpoint: *endpoint,

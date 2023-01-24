@@ -2,6 +2,7 @@ module etl
 
 require (
 	github.com/AntonYurchenko/log-go v0.2.3
+	github.com/DATA-DOG/go-sqlmock v1.5.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/robfig/cron/v3 v3.0.1
 	google.golang.org/grpc v1.50.1
